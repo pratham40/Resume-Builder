@@ -12,6 +12,4 @@ public interface UserRepository extends MongoRepository<User, ObjectId> {
 
     boolean existsByEmail(String email);
 
-//    User find();
-
 }
