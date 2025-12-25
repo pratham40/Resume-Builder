@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -32,36 +33,41 @@ public class AuthService {
 
     public AuthResponse register(RegisterRequest registerRequest) {
 
-        log.info("Register request received : {}", registerRequest);
+        try{
+            log.info("Register request received : {}", registerRequest);
 
 
-        if (userRepository.existsByEmail(registerRequest.getEmail())){
-            throw new ResourceExistException("User with email "+registerRequest.getEmail()+" already exists");
+            if (userRepository.existsByEmail(registerRequest.getEmail())){
+                throw new ResourceExistException("User with email "+registerRequest.getEmail()+" already exists");
+            }
+
+            User user=User.builder()
+                    .name(registerRequest.getName())
+                    .email(registerRequest.getEmail())
+                    .password(registerRequest.getPassword())
+                    .profileImageUrl(registerRequest.getProfileImageUrl())
+                    .subscriptionPlan("basic")
+                    .emailVerified(false)
+                    .verificationToken(UUID.randomUUID().toString())
+                    .verificationExpiry(LocalDateTime.now().plusMinutes(15))
+                    .build();
+
+
+            userRepository.save(user);
+
+
+            sendVerificationEmail(user);
+
+
+            log.info("User registered successfully : {}", user);
+
+            return toResponse(user);
+
+
+        } catch (Exception e) {
+            log.error("Registration failed for {}: {}", registerRequest.getEmail(), e.getMessage());
+            throw new RuntimeException("Registration failed: " + e.getMessage());
         }
-
-        User user=User.builder()
-                .name(registerRequest.getName())
-                .email(registerRequest.getEmail())
-                .password(registerRequest.getPassword())
-                .profileImageUrl(registerRequest.getProfileImageUrl())
-                .subscriptionPlan("basic")
-                .emailVerified(false)
-                .verificationToken(UUID.randomUUID().toString())
-                .verificationExpiry(LocalDateTime.now().plusMinutes(15))
-                .build();
-
-
-        userRepository.save(user);
-
-
-        sendVerificationEmail(user);
-
-
-        log.info("User registered successfully : {}", user);
-
-        return toResponse(user);
-
-
 
     }
 
@@ -79,6 +85,7 @@ public class AuthService {
             emailService.sendHtmlEmail(user.getEmail(), "Email Verification", htmlContent);
             log.info("Verification email sent to {}", user.getEmail());
         } catch (Exception e) {
+            log.error("Failed to send verification email to {}: {}", user.getEmail(), e.getMessage());
             throw new RuntimeException("Failed to send verification email to "+user.getEmail()+": "+e.getMessage());
         }
     }
@@ -95,5 +102,33 @@ public class AuthService {
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();
+    }
+
+    public void verifyEmail(String token) {
+
+        try{
+            Optional<User> user = userRepository.findByVerificationToken(token);
+            if (user.isEmpty()) {
+                throw new RuntimeException("Invalid verification token");
+            }
+
+            if (user.get().getVerificationExpiry().isBefore(LocalDateTime.now())) {
+                throw new RuntimeException("Verification token has expired Please request a new one");
+            }
+
+            String tokenUser = user.get().getVerificationToken();
+            if (!tokenUser.equals(token)) {
+                throw new RuntimeException("Invalid verification token");
+            }
+
+            user.get().setEmailVerified(true);
+            user.get().setVerificationToken(null);
+            user.get().setVerificationExpiry(null);
+
+            userRepository.save(user.get());
+        } catch (Exception e) {
+            log.error("Email verification failed for token {}: {}", token, e.getMessage());
+            throw new RuntimeException("Email verification failed: " + e.getMessage());
+        }
     }
 }
