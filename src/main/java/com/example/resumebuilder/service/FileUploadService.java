@@ -18,12 +18,12 @@ public class FileUploadService {
         this.cloudinary = cloudinary;
     }
 
-    public Map uploadSingleImage(MultipartFile file) throws IOException {
+    public Map<String,Object> uploadSingleImage(MultipartFile file) throws IOException {
         try{
 
             log.info("Uploading image: {}", file.getOriginalFilename());
 
-            Map uploadResponse = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap("resource_type", "image"));
+            Map<String,Object> uploadResponse = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap("resource_type", "image"));
             log.info("Image uploaded successfully: {}", uploadResponse);
             return uploadResponse;
         } catch (IOException e) {
