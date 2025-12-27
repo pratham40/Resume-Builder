@@ -44,7 +44,7 @@ public class AuthController {
     @PostMapping("/upload-image")
     public ResponseEntity<?> uploadImage(@RequestPart("image") MultipartFile file) throws IOException {
         log.info("Received image upload request: {}", file.getOriginalFilename());
-        Map map = fileUploadService.uploadSingleImage(file);
+        Map<String,Object> map = fileUploadService.uploadSingleImage(file);
         return ResponseEntity.status(HttpStatus.OK).body(Map.of("SECURE_URL",map.get("secure_url"),"PUBLIC_ID",map.get("public_id"),"message","Image uploaded successfully"));
     }
 
