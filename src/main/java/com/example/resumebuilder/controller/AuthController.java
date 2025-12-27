@@ -4,13 +4,16 @@ package com.example.resumebuilder.controller;
 import com.example.resumebuilder.dto.AuthResponse;
 import com.example.resumebuilder.dto.RegisterRequest;
 import com.example.resumebuilder.service.AuthService;
+import com.example.resumebuilder.service.FileUploadService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.Map;
 
 @RestController
@@ -19,6 +22,8 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 public class AuthController {
     private final AuthService authService;
+
+    private final FileUploadService fileUploadService;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request){
@@ -36,6 +41,12 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.OK).body(Map.of("message","Email verified successfully"));
     }
 
+    @PostMapping("/upload-image")
+    public ResponseEntity<?> uploadImage(@RequestPart("image") MultipartFile file) throws IOException {
+        log.info("Received image upload request: {}", file.getOriginalFilename());
+        Map map = fileUploadService.uploadSingleImage(file);
+        return ResponseEntity.status(HttpStatus.OK).body(Map.of("SECURE_URL",map.get("secure_url"),"PUBLIC_ID",map.get("public_id"),"message","Image uploaded successfully"));
+    }
 
 
 }
